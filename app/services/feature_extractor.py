@@ -19,6 +19,9 @@ def get_tld(url):
     return domain.split('.')[-1]
 
 
+# =========================
+# 🔍 URL FEATURE EXTRACTION
+# =========================
 def extract_url_features(url: str):
     parsed = urlparse(url)
 
@@ -38,9 +41,11 @@ def extract_url_features(url: str):
     }
 
 
+# =========================
+# 🌐 HTML FEATURE EXTRACTION
+# =========================
 def extract_html_features(url: str):
     try:
-        # 🔥 FIX: Browser-like request
         res = requests.get(
             url,
             timeout=3,
@@ -53,8 +58,6 @@ def extract_html_features(url: str):
         return {
             "HasTitle": int(soup.title is not None),
             "HasMeta": int(soup.find("meta") is not None),
-
-            # 🔥 FIX: better favicon detection
             "HasFavicon": int(soup.find("link", rel=lambda x: x and "icon" in x)),
 
             "HasExternalFormSubmit": 0,
@@ -77,7 +80,7 @@ def extract_html_features(url: str):
         }
 
     except:
-        # 🔥 SAFE fallback (prevents false phishing)
+        # Safe fallback
         return {
             "HasTitle": 1,
             "HasMeta": 1,
@@ -101,6 +104,61 @@ def extract_html_features(url: str):
         }
 
 
+# =========================
+# 🧠 REASON GENERATION (NEW)
+# =========================
+def generate_reasons_from_features(url: str, features: dict):
+    reasons = []
+
+    # URL-based checks
+    if features["URLLength"] > 75:
+        reasons.append("URL is unusually long")
+
+    if features["NoOfDots"] > 5:
+        reasons.append("Too many dots in URL (possible subdomain spoofing)")
+
+    if features["NoOfSubDomain"] > 3:
+        reasons.append("Too many subdomains detected")
+
+    if features["NoOfDigits"] > 5:
+        reasons.append("URL contains many numbers (suspicious pattern)")
+
+    if features["IsHTTPS"] == 0:
+        reasons.append("Connection is not secure (HTTP)")
+
+    if features["NoOfObfuscatedChar"] > 0:
+        reasons.append("URL contains obfuscated characters like % or @")
+
+    if features["IsDomainIP"] == 1:
+        reasons.append("Uses IP address instead of domain name")
+
+    # Keyword checks
+    suspicious_words = ["login", "verify", "secure", "bank", "account", "update"]
+    if any(word in url for word in suspicious_words):
+        reasons.append("Contains sensitive keywords like login/verify")
+
+    # HTML-based checks
+    if features["HasPasswordField"] == 1:
+        reasons.append("Page contains password input field")
+
+    if features["NoOfiFrame"] > 2:
+        reasons.append("Multiple iframes detected")
+
+    if features["NoOfURLRedirect"] > 2:
+        reasons.append("Multiple redirects detected")
+
+    if features["HasKeywordBank"] == 1:
+        reasons.append("Bank-related content detected")
+
+    if features["HasKeywordCrypto"] == 1:
+        reasons.append("Crypto-related content detected")
+
+    return reasons
+
+
+# =========================
+# 🔗 MAIN FEATURE FUNCTION
+# =========================
 def extract_features(url: str):
     url = normalize_url(url)
 
@@ -118,8 +176,13 @@ def extract_features(url: str):
     else:
         tld_encoded = 0
 
-    return {
+    combined_features = {
         **url_features,
         **html_features,
         "TLD": tld_encoded
     }
+
+    # 🔥 Generate reasons here
+    reasons = generate_reasons_from_features(url, combined_features)
+
+    return combined_features, reasons

@@ -17,3 +17,7 @@ app.include_router(predict.router)
 @app.get("/")
 def home():
     return {"message": "DarkNetra is running 🚀"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

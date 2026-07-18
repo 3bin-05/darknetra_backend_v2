@@ -1,0 +1,34 @@
+name: Keep-Alive
+
+on:
+  schedule:
+    # Trigger every 10 minutes (Render free tier spins down after 15 minutes of inactivity)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log Timestamp and Target
+        run: |
+          echo "Timestamp: $(date -u)"
+          echo "Pinging: ${{ secrets.RENDER_APP_URL }}/health"
+
+      - name: Ping Render Web Service
+        run: |
+          URL="${{ secrets.RENDER_APP_URL }}"
+          if [ -z "$URL" ]; then
+            echo "Error: RENDER_APP_URL secret is not set. Please add it to your repository secrets."
+            exit 1
+          fi
+          
+          # Perform ping with 20 seconds timeout and 3 retries for potential cold starts
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --retry 3 "$URL/health")
+          echo "HTTP Status Code: $STATUS_CODE"
+          
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Keep-alive ping failed!"
+            exit 1
+          fi
+          echo "Keep-alive ping succeeded!"

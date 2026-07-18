@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: darknetra-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.6
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: VIRUSTOTAL_API_KEY
+        sync: false
